@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:-orderdb}
+      POSTGRES_USER: ${DB_USERNAME:-order_app}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-order_app_dev_only}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-order_app} -d ${DB_NAME:-orderdb}"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+
+  app:
+    build: .
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-orderdb}
+      DB_USERNAME: ${DB_USERNAME:-order_app}
+      DB_PASSWORD: ${DB_PASSWORD:-order_app_dev_only}
+      SERVER_PORT: 8080
+      ORDER_PROCESSING_CRON: ${ORDER_PROCESSING_CRON:-0 */5 * * * *}
+      ORDER_PROCESSING_ZONE: ${ORDER_PROCESSING_ZONE:-UTC}
+      ORDER_PROCESSING_BATCH_SIZE: ${ORDER_PROCESSING_BATCH_SIZE:-100}
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres-data:
