@@ -11,7 +11,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.winter.orders.application.OrderStatusService;
 import com.winter.orders.application.PendingOrderProcessor;
-import com.winter.orders.domain.OrderConflictException;
+import com.winter.orders.domain.exception.OrderConflictException;
 import com.winter.orders.domain.OrderStatus;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;

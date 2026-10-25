@@ -1,4 +1,4 @@
-package com.winter.orders.domain;
+package com.winter.orders.application.exception;
 
 import java.util.UUID;
 

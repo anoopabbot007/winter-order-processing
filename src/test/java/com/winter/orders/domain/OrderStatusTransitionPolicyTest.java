@@ -1,5 +1,8 @@
 package com.winter.orders.domain;
 
+import com.winter.orders.domain.exception.InvalidOrderTransitionException;
+import com.winter.orders.domain.exception.OrderConflictException;
+
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 

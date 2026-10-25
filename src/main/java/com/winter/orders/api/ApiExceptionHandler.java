@@ -1,7 +1,7 @@
 package com.winter.orders.api;
 
-import com.winter.orders.domain.OrderConflictException;
-import com.winter.orders.domain.OrderNotFoundException;
+import com.winter.orders.domain.exception.OrderConflictException;
+import com.winter.orders.application.exception.OrderNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.net.URI;

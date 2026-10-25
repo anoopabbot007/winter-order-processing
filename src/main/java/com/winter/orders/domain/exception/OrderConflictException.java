@@ -1,4 +1,4 @@
-package com.winter.orders.domain;
+package com.winter.orders.domain.exception;
 
 public class OrderConflictException extends RuntimeException {
 

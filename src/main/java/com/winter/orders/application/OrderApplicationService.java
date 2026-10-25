@@ -4,7 +4,7 @@ import com.winter.orders.api.OrderApiMapper;
 import com.winter.orders.api.dto.OrderResponse;
 import com.winter.orders.api.dto.OrderSummaryResponse;
 import com.winter.orders.api.dto.PageResponse;
-import com.winter.orders.domain.OrderNotFoundException;
+import com.winter.orders.application.exception.OrderNotFoundException;
 import com.winter.orders.domain.OrderStatus;
 import com.winter.orders.persistence.OrderEntity;
 import com.winter.orders.persistence.OrderItemEntity;

@@ -1,4 +1,6 @@
-package com.winter.orders.domain;
+package com.winter.orders.domain.exception;
+
+import com.winter.orders.domain.OrderStatus;
 
 public class InvalidOrderTransitionException extends OrderConflictException {
 

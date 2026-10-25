@@ -1,5 +1,7 @@
 package com.winter.orders.domain;
 
+import com.winter.orders.domain.exception.InvalidOrderTransitionException;
+import com.winter.orders.domain.exception.OrderConflictException;
 import java.util.Map;
 import org.springframework.stereotype.Component;
 
