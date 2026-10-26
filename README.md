@@ -201,7 +201,3 @@ The PostgreSQL integration suite uses Testcontainers and is configured to skip w
 Input validation, parameterized persistence queries, bounded pagination, database constraints, and centralized errors are implemented. Authentication and authorization are not configured; the status and cancellation routes are documented as administrative but are not protected by an identity provider. Do not expose these routes to untrusted clients until authorization is added. Actuator exposes health and info only, and health details are hidden.
 
 There is no product catalog, stock reservation, payment handling, idempotency key, currency conversion, retry queue, distributed scheduler lease, or AI integration. A safe read-only assistant extension is outlined in [`docs/AI_EXTENSION_PROPOSAL.md`](docs/AI_EXTENSION_PROPOSAL.md); broader trade-offs are in [`docs/DESIGN_DECISIONS.md`](docs/DESIGN_DECISIONS.md).
-
-## AI assistance disclosure
-
-OpenAI coding assistance generated the initial architecture, application code, tests, and documentation from the assignment brief. The result was reviewed against the requirements and build output; compilation exposed an incorrect Spring exception import, which was corrected before the clean build and full test run. No human review is implied by this disclosure. The assignment author should review the code, rerun the documented commands, and be able to explain the trade-offs before presenting it.
