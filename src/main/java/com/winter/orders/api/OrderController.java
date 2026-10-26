@@ -48,7 +48,7 @@ public class OrderController {
     @PostMapping
     @Operation(summary = "Create an order", description = "The server calculates the total and snapshots the supplied unit prices.")
     public ResponseEntity<OrderResponse> create(@Valid @RequestBody CreateOrderRequest request) {
-        OrderResponse created = orderService.create(mapper.toCommand(request));
+        OrderResponse created = mapper.toResponse(orderService.create(mapper.toCommand(request)));
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{orderId}")
                 .buildAndExpand(created.id())
@@ -59,7 +59,7 @@ public class OrderController {
     @GetMapping("/{orderId}")
     @Operation(summary = "Get order details")
     public OrderResponse get(@PathVariable UUID orderId) {
-        return orderService.get(orderId);
+        return mapper.toResponse(orderService.get(orderId));
     }
 
     @GetMapping
@@ -70,7 +70,7 @@ public class OrderController {
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
             @RequestParam(defaultValue = "createdAt,desc") String sort) {
         Sort sortOrder = parseSort(sort);
-        return orderService.list(status, PageRequest.of(page, size, sortOrder));
+        return mapper.toPage(orderService.list(status, PageRequest.of(page, size, sortOrder)), mapper::toSummary);
     }
 
     @PatchMapping("/{orderId}/status")
@@ -78,7 +78,7 @@ public class OrderController {
             summary = "Advance order status",
             description = "Administrative operation. Authentication is not configured. Only PENDING→PROCESSING→SHIPPED→DELIVERED is allowed; use the cancel endpoint for cancellation.")
     public OrderResponse updateStatus(@PathVariable UUID orderId, @Valid @RequestBody StatusUpdateRequest request) {
-        return statusService.transition(orderId, request.status());
+        return mapper.toResponse(statusService.transition(orderId, request.status()));
     }
 
     @PostMapping("/{orderId}/cancel")
@@ -86,7 +86,7 @@ public class OrderController {
             summary = "Cancel a pending order",
             description = "Administrative operation. Cancellation is accepted only while the order is PENDING; authentication is not configured.")
     public OrderResponse cancel(@PathVariable UUID orderId) {
-        return statusService.cancel(orderId);
+        return mapper.toResponse(statusService.cancel(orderId));
     }
 
     private Sort parseSort(String sort) {

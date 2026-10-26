@@ -1,9 +1,5 @@
 package com.winter.orders.application;
 
-import com.winter.orders.api.OrderApiMapper;
-import com.winter.orders.api.dto.OrderResponse;
-import com.winter.orders.api.dto.OrderSummaryResponse;
-import com.winter.orders.api.dto.PageResponse;
 import com.winter.orders.application.exception.OrderNotFoundException;
 import com.winter.orders.domain.OrderStatus;
 import com.winter.orders.persistence.OrderEntity;
@@ -13,7 +9,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
 import java.util.UUID;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,17 +17,17 @@ import org.springframework.transaction.annotation.Transactional;
 public class OrderApplicationService {
 
     private final OrderRepository orderRepository;
-    private final OrderApiMapper mapper;
+    private final OrderResultMapper mapper;
     private final Clock clock;
 
-    public OrderApplicationService(OrderRepository orderRepository, OrderApiMapper mapper, Clock clock) {
+    public OrderApplicationService(OrderRepository orderRepository, OrderResultMapper mapper, Clock clock) {
         this.orderRepository = orderRepository;
         this.mapper = mapper;
         this.clock = clock;
     }
 
     @Transactional
-    public OrderResponse create(CreateOrderCommand command) {
+    public OrderResult create(CreateOrderCommand command) {
         if (command.items() == null || command.items().isEmpty()) {
             throw new IllegalArgumentException("An order must contain at least one item.");
         }
@@ -52,22 +47,22 @@ public class OrderApplicationService {
                 line.quantity(),
                 line.unitPrice().setScale(2, RoundingMode.UNNECESSARY))));
 
-        return mapper.toResponse(orderRepository.save(order));
+        return mapper.toOrderResult(orderRepository.save(order));
     }
 
     @Transactional(readOnly = true)
-    public OrderResponse get(UUID orderId) {
+    public OrderResult get(UUID orderId) {
         OrderEntity order = orderRepository.findDetailsById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException(orderId));
-        return mapper.toResponse(order);
+        return mapper.toOrderResult(order);
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<OrderSummaryResponse> list(OrderStatus status, Pageable pageable) {
-        Page<OrderEntity> orders = status == null
+    public PageResult<OrderSummaryResult> list(OrderStatus status, Pageable pageable) {
+        var orders = status == null
                 ? orderRepository.findAll(pageable)
                 : orderRepository.findAll((root, query, criteriaBuilder) ->
                         criteriaBuilder.equal(root.get("status"), status), pageable);
-        return mapper.toPage(orders, mapper::toSummary);
+        return mapper.toSummaryPage(orders);
     }
 }

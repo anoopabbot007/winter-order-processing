@@ -1,7 +1,5 @@
 package com.winter.orders.application;
 
-import com.winter.orders.api.OrderApiMapper;
-import com.winter.orders.api.dto.OrderResponse;
 import com.winter.orders.domain.OrderStatus;
 import com.winter.orders.domain.OrderStatusTransitionPolicy;
 import com.winter.orders.application.exception.OrderNotFoundException;
@@ -17,13 +15,13 @@ public class OrderStatusService {
 
     private final OrderRepository orderRepository;
     private final OrderStatusTransitionPolicy transitionPolicy;
-    private final OrderApiMapper mapper;
+    private final OrderResultMapper mapper;
     private final Clock clock;
 
     public OrderStatusService(
             OrderRepository orderRepository,
             OrderStatusTransitionPolicy transitionPolicy,
-            OrderApiMapper mapper,
+            OrderResultMapper mapper,
             Clock clock) {
         this.orderRepository = orderRepository;
         this.transitionPolicy = transitionPolicy;
@@ -32,19 +30,19 @@ public class OrderStatusService {
     }
 
     @Transactional
-    public OrderResponse transition(UUID orderId, OrderStatus requestedStatus) {
+    public OrderResult transition(UUID orderId, OrderStatus requestedStatus) {
         OrderEntity order = lockOrder(orderId);
         transitionPolicy.requireForwardTransition(order.getStatus(), requestedStatus);
         order.changeStatus(requestedStatus, clock.instant());
-        return mapper.toResponse(orderRepository.findDetailsById(orderId).orElseThrow());
+        return mapper.toOrderResult(orderRepository.findDetailsById(orderId).orElseThrow());
     }
 
     @Transactional
-    public OrderResponse cancel(UUID orderId) {
+    public OrderResult cancel(UUID orderId) {
         OrderEntity order = lockOrder(orderId);
         transitionPolicy.requireCancellable(order.getStatus());
         order.changeStatus(OrderStatus.CANCELLED, clock.instant());
-        return mapper.toResponse(orderRepository.findDetailsById(orderId).orElseThrow());
+        return mapper.toOrderResult(orderRepository.findDetailsById(orderId).orElseThrow());
     }
 
     private OrderEntity lockOrder(UUID orderId) {

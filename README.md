@@ -25,8 +25,8 @@ flowchart LR
 
 | Package | Responsibility |
 | --- | --- |
-| `api` | Versioned REST routes, request/response DTO mapping, validation errors, OpenAPI metadata |
-| `application` | Transaction boundaries, order creation and retrieval, state changes, bounded processing batches |
+| `api` | Versioned REST routes, HTTP request/response DTO mapping, validation errors, OpenAPI metadata |
+| `application` | Use cases, transaction boundaries, application commands/results, state changes, bounded processing batches |
 | `domain` | Status values, allowed transitions, business exceptions |
 | `persistence` | JPA aggregate and Spring Data repository with row-locking queries |
 | `scheduling` | Cron-triggered adapter that invokes the separately testable processing service |
@@ -159,7 +159,7 @@ Order creation and item persistence share one transaction. Flyway owns the schem
 ## Design choices and patterns
 
 - **Repository pattern:** Spring Data JPA isolates database operations, pagination, eager detail loading, and locking queries.
-- **DTO and mapper separation:** API records do not expose JPA entities; `OrderApiMapper` converts at that boundary.
+- **DTO and mapper separation:** API records do not expose JPA entities. `OrderResultMapper` converts persistence aggregates into application results; `OrderApiMapper` converts HTTP requests into commands and application results into API DTOs. Application services do not depend on the API package.
 - **Dependency injection:** services depend on repositories, policies, mapper, and injected `Clock`; tests can substitute them.
 - **Transition policy:** one small domain component owns forward-transition and cancellation rules. The State pattern is not used because the finite transition table is clearer and smaller.
 - **Strategy pattern:** not used; there is only one processing policy.

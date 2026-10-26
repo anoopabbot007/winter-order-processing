@@ -7,10 +7,11 @@ import com.winter.orders.api.dto.OrderResponse;
 import com.winter.orders.api.dto.OrderSummaryResponse;
 import com.winter.orders.api.dto.PageResponse;
 import com.winter.orders.application.CreateOrderCommand;
-import com.winter.orders.persistence.OrderEntity;
-import com.winter.orders.persistence.OrderItemEntity;
+import com.winter.orders.application.OrderItemResult;
+import com.winter.orders.application.OrderResult;
+import com.winter.orders.application.OrderSummaryResult;
+import com.winter.orders.application.PageResult;
 import java.util.function.Function;
-import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 
 /** Keeps external request/response shapes separate from the application and JPA models. */
@@ -25,43 +26,43 @@ public class OrderApiMapper {
                         .toList());
     }
 
-    public OrderResponse toResponse(OrderEntity order) {
+    public OrderResponse toResponse(OrderResult order) {
         return new OrderResponse(
-                order.getId(),
-                order.getCustomerReference(),
-                order.getItems().stream().map(this::toItemResponse).toList(),
-                order.getTotalAmount(),
-                order.getStatus(),
-                order.getCreatedAt(),
-                order.getUpdatedAt());
+                order.id(),
+                order.customerReference(),
+                order.items().stream().map(this::toItemResponse).toList(),
+                order.totalAmount(),
+                order.status(),
+                order.createdAt(),
+                order.updatedAt());
     }
 
-    public OrderSummaryResponse toSummary(OrderEntity order) {
+    public OrderSummaryResponse toSummary(OrderSummaryResult order) {
         return new OrderSummaryResponse(
-                order.getId(),
-                order.getCustomerReference(),
-                order.getTotalAmount(),
-                order.getStatus(),
-                order.getCreatedAt(),
-                order.getUpdatedAt());
+                order.id(),
+                order.customerReference(),
+                order.totalAmount(),
+                order.status(),
+                order.createdAt(),
+                order.updatedAt());
     }
 
-    public <T, R> PageResponse<R> toPage(Page<T> page, Function<T, R> mapper) {
+    public <T, R> PageResponse<R> toPage(PageResult<T> page, Function<T, R> mapper) {
         return new PageResponse<>(
-                page.getContent().stream().map(mapper).toList(),
-                page.getNumber(),
-                page.getSize(),
-                page.getTotalElements(),
-                page.getTotalPages(),
-                page.isFirst(),
-                page.isLast());
+                page.content().stream().map(mapper).toList(),
+                page.page(),
+                page.size(),
+                page.totalElements(),
+                page.totalPages(),
+                page.first(),
+                page.last());
     }
 
     private CreateOrderCommand.Line toCommandLine(CreateOrderItemRequest request) {
         return new CreateOrderCommand.Line(request.itemName(), request.quantity(), request.unitPrice());
     }
 
-    private OrderItemResponse toItemResponse(OrderItemEntity item) {
-        return new OrderItemResponse(item.getId(), item.getItemName(), item.getQuantity(), item.getUnitPrice());
+    private OrderItemResponse toItemResponse(OrderItemResult item) {
+        return new OrderItemResponse(item.id(), item.itemName(), item.quantity(), item.unitPrice());
     }
 }

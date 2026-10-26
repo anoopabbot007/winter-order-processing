@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-import com.winter.orders.api.OrderApiMapper;
 import com.winter.orders.domain.OrderStatus;
 import com.winter.orders.persistence.OrderEntity;
 import com.winter.orders.persistence.OrderRepository;
@@ -34,7 +33,7 @@ class OrderApplicationServiceTest {
     void setUp() {
         service = new OrderApplicationService(
                 orderRepository,
-                new OrderApiMapper(),
+                new OrderResultMapper(),
                 Clock.fixed(NOW, ZoneOffset.UTC));
     }
 

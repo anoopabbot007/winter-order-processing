@@ -1,0 +1,599 @@
+{
+  "info": {
+    "name": "Winter Order Processing API - Interview Demo",
+    "description": "Import this collection and run requests in order.\n\nRequests target http://localhost:8080. Create requests save orderId and cancelOrderId automatically.\n\nThe application scheduler defaults to every five minutes. For a predictable manual status-transition demo, start the application with ORDER_PROCESSING_CRON=0 0 0 1 1 * so the scheduled processor does not move a newly created PENDING order during the demo. Restore 0 */5 * * * * afterward.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health - Actuator",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/actuator/health",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "actuator",
+            "health"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Health endpoint returns 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Application health is UP', function () { pm.expect(pm.response.json().status).to.eql('UP'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "1 - Main order lifecycle",
+      "item": [
+        {
+          "name": "01 Create order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8080/api/v1/orders",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "v1",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerReference\": \"interview-customer-100\",\n  \"items\": [\n    {\n      \"itemName\": \"Desk lamp\",\n      \"quantity\": 2,\n      \"unitPrice\": 12.25\n    },\n    {\n      \"itemName\": \"Cable\",\n      \"quantity\": 1,\n      \"unitPrice\": 4.5\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Order is created with 201', function () { pm.response.to.have.status(201); });",
+                  "const body = pm.response.json();",
+                  "pm.test('New order has expected server-calculated data', function () {",
+                  "  pm.expect(body.id).to.be.a('string');",
+                  "  pm.expect(body.status).to.eql('PENDING');",
+                  "  pm.expect(body.totalAmount).to.eql(29);",
+                  "  pm.expect(body.items).to.have.lengthOf(2);",
+                  "});",
+                  "pm.collectionVariables.set('orderId', body.id);",
+                  "pm.test('Location header points to the new order', function () { pm.expect(pm.response.headers.get('Location')).to.include(body.id); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 Get order details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/v1/orders/{{orderId}}",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Order details return 200', function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test('Order and item price snapshots are present', function () {",
+                  "  pm.expect(body.id).to.eql(pm.collectionVariables.get('orderId'));",
+                  "  pm.expect(body.items).to.have.lengthOf(2);",
+                  "  pm.expect(body.items[0].unitPrice).to.eql(12.25);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 List orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/v1/orders?page=0&size=20&sort=createdAt%2Cdesc",
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0",
+                  "disabled": false
+                },
+                {
+                  "key": "size",
+                  "value": "20",
+                  "disabled": false
+                },
+                {
+                  "key": "sort",
+                  "value": "createdAt,desc",
+                  "disabled": false
+                }
+              ],
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "v1",
+                "orders"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Order list returns 200', function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test('Paged response has expected fields', function () {",
+                  "  pm.expect(body.content).to.be.an('array');",
+                  "  pm.expect(body.page).to.eql(0);",
+                  "  pm.expect(body.totalElements).to.be.a('number');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04 Advance PENDING to PROCESSING",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8080/api/v1/orders/{{orderId}}/status",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderId}}",
+                "status"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"PROCESSING\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Order advances to PROCESSING', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response status is PROCESSING', function () { pm.expect(pm.response.json().status).to.eql('PROCESSING'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05 Advance PROCESSING to SHIPPED",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8080/api/v1/orders/{{orderId}}/status",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderId}}",
+                "status"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"SHIPPED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Order advances to SHIPPED', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response status is SHIPPED', function () { pm.expect(pm.response.json().status).to.eql('SHIPPED'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "06 Advance SHIPPED to DELIVERED",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8080/api/v1/orders/{{orderId}}/status",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderId}}",
+                "status"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"DELIVERED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Order advances to DELIVERED', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response status is DELIVERED', function () { pm.expect(pm.response.json().status).to.eql('DELIVERED'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "07 Reject backward transition",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8080/api/v1/orders/{{orderId}}/status",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderId}}",
+                "status"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"PROCESSING\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Backward transition returns 409 Conflict', function () { pm.response.to.have.status(409); });",
+                  "pm.test('Conflict has the API error code', function () { pm.expect(pm.response.json().code).to.eql('ORDER_CONFLICT'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "08 Reject cancellation after delivery",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/v1/orders/{{orderId}}/cancel",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{orderId}}",
+                "cancel"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Cancellation of a delivered order returns 409', function () { pm.response.to.have.status(409); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2 - Cancellation flow",
+      "item": [
+        {
+          "name": "01 Create a pending order for cancellation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8080/api/v1/orders",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "v1",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerReference\": \"interview-customer-cancel\",\n  \"items\": [\n    {\n      \"itemName\": \"Notebook\",\n      \"quantity\": 1,\n      \"unitPrice\": 4.2\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Cancellation demo order is created', function () { pm.response.to.have.status(201); });",
+                  "const body = pm.response.json();",
+                  "pm.expect(body.status).to.eql('PENDING');",
+                  "pm.collectionVariables.set('cancelOrderId', body.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 Cancel pending order",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/v1/orders/{{cancelOrderId}}/cancel",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "{{cancelOrderId}}",
+                "cancel"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Pending order is cancelled', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response status is CANCELLED', function () { pm.expect(pm.response.json().status).to.eql('CANCELLED'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3 - Error cases",
+      "item": [
+        {
+          "name": "Reject an empty item list",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8080/api/v1/orders",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "v1",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerReference\": \"interview-invalid-order\",\n  \"items\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Invalid request returns 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('Validation response is structured', function () { pm.expect(pm.response.json().code).to.eql('VALIDATION_FAILED'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Return 404 for an unknown order",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/v1/orders/00000000-0000-0000-0000-000000000001",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "v1",
+                "orders",
+                "00000000-0000-0000-0000-000000000001"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Unknown order returns 404', function () { pm.response.to.have.status(404); });",
+                  "pm.test('Response identifies missing order', function () { pm.expect(pm.response.json().code).to.eql('ORDER_NOT_FOUND'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "orderId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "cancelOrderId",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
